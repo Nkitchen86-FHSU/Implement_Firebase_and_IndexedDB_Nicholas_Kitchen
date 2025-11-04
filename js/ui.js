@@ -69,33 +69,81 @@ async function getDB() {
   return dbPromise;
 }
 
+// Wait until Firebase is reachable before syncing
+async function firebaseReady(maxRetries = 5, delay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await getItemsFromFirebase();
+      console.log("Firebase is ready!");
+      return true;
+    } catch (err) {
+      console.warn("Firebase is not ready!");
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  return false;
+}
+
 // Sync unsynced items from IndexedDB to Firebase
 async function syncItems() {
+  if (!isOnline()) return;
+
+  const ready = await firebaseReady(5, 1000);
+  if (!ready) {
+    console.warn("Skipping sync - Firebase not ready");
+  }
+
   const db = await getDB();
-  const tx = db.transaction("items", "readonly");
-  const store = tx.objectStore("items");
-  const items = await store.getAll();
-  await tx.done;
+  const txRead = db.transaction("items", "readonly");
+  const items = await txRead.objectStore("items").getAll();
+  await txRead.done;
 
   for (const item of items) {
-    if (!item.synced && isOnline()) {
+    if (!item.synced || item.id.startsWith("temp-")) {
+      if (!isOnline()) break;
+
       try {
-        const itemToSync = {
-          name: item.name,
-          quantity: item.quantity,
-          category: item.category,
-        };
-        const savedItem = await addItemToFirebase(itemToSync);
-        const txUpdate = db.transaction("items", "readwrite");
-        const storeUpdate = txUpdate.objectStore("items");
-        await storeUpdate.delete(item.id);
-        await storeUpdate.put({ ...item, id: savedItem.id, synced: true });
-        await txUpdate.done;
+        let savedItem = null;
+        if (item.id.startsWith("temp-")) {
+          savedItem = await addItemToFirebase({
+            name: item.name,
+            quantity: item.quantity,
+            category: item.category,
+          });
+        } else if (!item.synced) {
+          await updateItemInFirebase(item.id, {
+            name: item.name,
+            quantity: item.quantity,
+            category: item.category,
+          });
+        }
+
+        const txWrite = db.transaction("items", "readwrite");
+        const store = txWrite.objectStore("items");
+
+        if (item.id.startsWith("temp-") && savedItem) {
+          await store.delete(item.id);
+          await store.put({ ...item, id: savedItem.id, synced: true });
+        } else {
+          await store.put ({ ...item, synced: true });
+        }
+
+        await txWrite.done;
       } catch (error) {
         console.error("Error syncing item:", error);
+
+        const txErr = db.transaction("items", "readwrite");
+        const storeErr = txErr.objectStore("items");
+        await storeErr.put({ ...item, synced: false });
+        await txErr.done;
+
+        if (window.M) M.toast({ html: `Sync failed for "${item.name}" - will retry.`, classes: "red" });
       }
     }
   }
+
+  await loadItems();
+  if (window.M) M.toast({ html: "Offline changes synced successfully!", displayLength: 2500 });
 }
 
 // Check if the app is online
@@ -271,21 +319,31 @@ function displayItem(item) {
   // Create new item HTML and add it to the container
   const html = `                                   
       <div class="card-panel white row valign-wrapper" data-id=${item.id}>
+
         <div class="col s2">
           <img src="/img/icons/inventory.png" class="circle responsive-img" alt="Inventory icon" style="max-width: 100%; height: auto"/>
         </div>
+
         <div class="item-detail col s8">
           <h5 class="item-title black-text">${item.name}</h5>
           <div class="item-description">${item.quantity} units in stock (${item.category})</div>
         </div>
-        <div class="col s2 right-align">
-          <button class="item-delete btn-flat" aria-label="Delete item">
-            <i class="material-icons black-text" style="font-size: 30px">delete</i>
+
+        <div class="col s3 right-align">
+          <button class="decrease-btn btn-flat" data-id="${item.id}" aria-label="Decrease quantity">
+            <i class="material-icons black-text">remove</i>
+          </button>
+          <button class="increase-btn btn-flat" data-id="${item.id}" aria-label="Increase quantity">
+            <i class="material-icons black-text">add</i>
           </button>
           <button class="item-edit btn-flat" aria-label="Edit item">
             <i class="material-icons black-text" style="font-size: 30px">edit</i>
           </button>
+          <button class="item-delete btn-flat" aria-label="Delete item">
+            <i class="material-icons black-text" style="font-size: 30px">delete</i>
+          </button>
         </div>
+
       </div>
   `;
   itemContainer.insertAdjacentHTML("beforeend", html);
@@ -301,6 +359,65 @@ function displayItem(item) {
   editButton.addEventListener("click", () =>
     openEditForm(item.id, item.name, item.quantity, item.category)
   );
+
+  const addButton = itemContainer.querySelector(
+    `[data-id="${item.id}"] .increase-btn`
+  );
+  addButton.addEventListener("click", () => adjustQuantity(item.id, 1));
+
+  const decreaseButton = itemContainer.querySelector(
+    `[data-id="${item.id}"] .decrease-btn`
+  );
+  decreaseButton.addEventListener("click", () => adjustQuantity(item.id, -1));
+}
+
+// Adjust the item quantity
+async function adjustQuantity(id, delta) {
+  const db = await getDB();
+  let tx = db.transaction("items", "readonly");
+  const store = tx.objectStore("items");
+  const item = await store.get(id);
+  await tx.done;
+
+  if (!item) return;
+
+  const newQty = Math.max(0, (parseInt(item.quantity) || 0) + delta);
+  if (newQty === 0) {
+    deleteItem(item.id);
+    return;
+  }
+  item.quantity = newQty;
+
+  const card = document.querySelector(`[data-id="${id}"] .item-description`);
+  if (card) {
+    card.innerHTML = `${newQty} units in stock (${item.category})`;
+  }
+
+  if (isOnline()) {
+    try {
+      await updateItemInFirebase(id, { quantity: newQty });
+      item.synced = true;
+    } catch (error) {
+      console.error("Error updating Firebase quantity:", error);
+      item.synced = false;
+    }
+  } else {
+    item.synced = false;
+  }
+
+  tx = db.transaction("items", "readwrite");
+  const storeWrite = tx.objectStore("items");
+  await storeWrite.put(item);
+  await tx.done;
+
+  if (window.M) {
+    M.toast({
+      html: `${item.name}: ${item.quantity} units`,
+      displayLength: 1500,
+    });
+  }
+
+  checkStorageUsage();
 }
 
 // Add/Edit Item Button Listener

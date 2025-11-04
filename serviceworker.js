@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   "/css/materialize.min.css",
   "/js/materialize.min.js",
   "/js/ui.js",
+  "/js/firebaseDB.js",
   "/img/icons/inventory.png",
   "/img/icons/icon-192x192.png",
   "/img/icons/icon-512x512.png",
@@ -18,7 +19,12 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log("Service worker: caching files");
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll([
+        ASSETS_TO_CACHE,
+        "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js",
+        "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js",
+        "https://unpkg.com/idb?module"
+      ]);
     })
   );
 });

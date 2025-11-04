@@ -1,0 +1,35 @@
+{
+  "name": "Inventory Manager",
+  "short_name": "IM",
+  "description": "Keep track of where your stuff is",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EDE8D0",
+  "theme_color": "#051650",
+  "dir": "ltr",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/img/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/img/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Add Item",
+      "short_name": "New Item",
+      "description": "Quickly add a new item",
+      "url": "/new-item",
+      "icons": [{ "src": "/img/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventory Manager</title>
+    <link rel="stylesheet" href="/css/materialize.min.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <!-- Import Google Icon Font -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <header>
+      <!-- Nav bar for Bigger screens -->
+      <nav class="z-depth-0">
+        <div class="nav-wrapper container">
+          <a href="/" aria-label="Inventory Manager Home" class="brand-logo white-text">
+            Inventory<span> Manager</span>
+          </a>
+          <!-- Hamburger Menu for medium and small screens -->
+          <a href="#" data-target="mobile-menu" class="sidenav-trigger right hide-on-med-and-up white-text" aria-label="Open side menu">
+            <i class="material-icons">menu</i>
+          </a>
+          <!-- Navbar Links for large screens -->
+          <ul class="right hide-on-small-and-down">
+            <li><a href="/" class="waves-effect white-text">Home</a></li>
+            <li><a href="/pages/about.html" class="waves-effect white-text">About</a></li>
+            <li><a href="/pages/contact.html" class="waves-effect white-text">Contact</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <aside>
+      <!-- Sidenav for small and medium screens -->
+      <ul class="sidenav" id="mobile-menu">
+        <li><a class="subheader">INVENTORY MANAGER</a></li>
+        <li><a href="/" class="waves-effect grey-text text-darken-4">Home</a></li>
+        <li><a href="/pages/about.html" class="waves-effect grey-text text-darken-4">About</a></li>
+        <li><div class="divider"></div></li>
+        <li><a href="/pages/contact.html" class="waves-effect grey-text text-darken-4"><i class="material-icons">mail_outline</i>Contact</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <!-- Sort and filter -->
+      <div class="controls container">
+        <div class="row">
+          <div class="input-field col s6"></div>
+            <select id="sort-select">
+              <option value="none" selected>Sort By</option>
+              <option value="name-asc" selected>Name (A-Z)</option>
+              <option value="name-desc" selected>Name (Z-A)</option>
+            </select>
+            <label>Sort Items</label>
+        </div>
+
+        <div class="input-field col s6">
+          <input id="filter-input" type="text" placeholder="Filter by category" />
+          <label for="filter-input">Filter by Category</label>
+        </div>
+      </div>
+
+      <!-- Inventory Items -->
+      <div class="center">
+        <button class="btn-floating btn-large sidenav-trigger" data-target="side-form" aria-label="Add new item">
+          <i class="material-icons">add</i>
+        </button>
+      </div>
+
+      <div class="items container grey-text text-darken-1"></div>
+
+      <div id="side-form" class="sidenav side-form">
+        <form class="add-item container section">
+          <h6 id="form-header">Add New Item</h6>
+          <div class="divider"></div>
+          <div class="input-field">
+            <label for="item-name" class="black-text">Item Name</label>
+            <input placeholder="Enter item name" id="item-name" class="validate" type="text" />
+          </div>
+          <div class="input-field">
+            <label for="item-quantity" class="black-text">Quantity</label>
+            <input placeholder="Enter quantity" id="item-quantity" class="validate" type="number" />
+          </div>
+          <div class="input-field">
+            <label for="item-category" class="black-text">Category</label>
+            <input placeholder="Enter category" id="item-category" class="validate" type="text" />
+          </div>
+          <input type="hidden" id="item-id" />
+          <div class="input-field center">
+            <button type="button" class="btn-small" id="form-action-btn">Add</button>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <script src="./js/materialize.min.js"></script>
+    <script type="module" src="./js/ui.js"></script>
+    <script type="module" src="./js/firebaseDB.js"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+body {
+    background-color: #EDE8D0
+}
+
+nav, .btn, .btn-floating, .btn small {
+    background-color: #051650 !important;
+}
+
+.brand-logo span {
+    color: #051650;
+}
+
+.side-form {
+    background-color: #FFF;
+}
+
+h6#form-header {
+    color: #051650;
+}
